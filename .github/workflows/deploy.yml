@@ -1,0 +1,86 @@
+name: Deploy Backend EC2
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B clean package -DskipTests
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ruancos
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ruancos/pf:${{ github.sha }}
+
+      - name: Deploy application on EC2
+        uses: appleboy/ssh-action@v1
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        with:
+          host: ${{ secrets.HOST_TEST }}
+          username: ubuntu
+          key: ${{ secrets.KEY_TEST }}
+          port: 22
+          envs: DB_PASSWORD
+          script: |
+            set -eu
+
+            echo "Verificando rede Docker..."
+            docker network inspect rede >/dev/null
+
+            echo "Verificando PostgreSQL..."
+            docker inspect -f '{{.State.Running}}' postgres-pf | grep -q true
+
+            echo "Baixando imagem..."
+            docker pull ruancos/pf:${{ github.sha }}
+
+            echo "Removendo container anterior..."
+            docker rm -f pf 2>/dev/null || true
+
+            echo "Iniciando aplicacao..."
+            docker run -d \
+              --name pf \
+              --restart unless-stopped \
+              --network rede \
+              -p 8080:8080 \
+              -e DB_HOST=postgres-pf \
+              -e DB_PORT=5432 \
+              -e DB_NAME=pf \
+              -e DB_USERNAME=admin \
+              -e DB_PASSWORD \
+              ruancos/pf:${{ github.sha }}
+
+            echo "Verificando status..."
+            docker ps --filter "name=^/pf$"
+
+            echo "Deploy finalizado!"
