@@ -17,8 +17,8 @@ public class TarefaController {
     private final TarefaService tarefaService;
 
     @GetMapping
-    public List<TarefaResponse> listar(@RequestParam(name = "emailUsuario", required = false) String emailUsuario) {
-        return tarefaService.listar(emailUsuario);
+    public List<TarefaResponse> listar() {
+        return tarefaService.listar();
     }
 
     @PostMapping

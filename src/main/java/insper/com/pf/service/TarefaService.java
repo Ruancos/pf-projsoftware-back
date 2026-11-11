@@ -15,9 +15,8 @@ public class TarefaService {
 
     private final TarefaRepository tarefaRepository;
 
-    public List<TarefaResponse> listar(String emailUsuario) {
+    public List<TarefaResponse> listar() {
         return tarefaRepository.findAll().stream()
-                .filter(tarefa -> tarefa.getEmailUsuario().equals(emailUsuario))
                 .map(TarefaResponse::from)
                 .toList();
     }
@@ -32,6 +31,7 @@ public class TarefaService {
         tarefa.setDescricao(request.getDescricao());
         tarefa.setPrioridade(request.getPrioridade());
         tarefa.setEmailUsuario(request.getEmailUsuario());
+        tarefaRepository.save(tarefa);
         return TarefaResponse.from(tarefa);
     }
 
