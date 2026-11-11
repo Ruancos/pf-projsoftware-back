@@ -8,6 +8,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class TarefaResponse {
 
+    private Long id;
     private String nome;
     private String descricao;
     private TipoPrioridade prioridade;
@@ -15,6 +16,7 @@ public class TarefaResponse {
 
     public static TarefaResponse from(Tarefa tarefa) {
         return new TarefaResponse(
+                tarefa.getId(),
                 tarefa.getTitulo(),
                 tarefa.getDescricao(),
                 tarefa.getPrioridade(),
